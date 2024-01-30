@@ -88,7 +88,7 @@ render world = Pictures [
 
 
 eventHandle :: Event -> World -> World
-eventHandle (EventKey key Up _ _) world = 
+eventHandle (EventKey key Down _ _) world = 
   case keyToDirection key of
     Just dir ->
       if prevDirection world /= opposite dir
