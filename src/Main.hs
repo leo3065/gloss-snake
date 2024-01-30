@@ -3,7 +3,8 @@ module Main(main) where
 import Text.Printf (printf)
 
 import Graphics.Gloss
-import Graphics.Gloss.Interface.IO.Interact ( Event(..) )
+import Graphics.Gloss.Interface.IO.Interact ( 
+  Event(..), Key(..) , SpecialKey(..), KeyState(..))
 import Graphics.Gloss.Interface.Environment ( getScreenSize )
 -- import qualified Graphics.Gloss.Data.Point.Arithmetic as V
 -- import Graphics.Gloss.Data.Vector
@@ -27,6 +28,19 @@ directionVector DirUp = (0, 1)
 directionVector DirDown = (0, -1)
 directionVector DirLeft = (-1, 0)
 directionVector DirRight = (1, 0)
+
+vectorDirection :: IntVec -> Direction
+vectorDirection (0, 1) = DirUp
+vectorDirection (0, -1) = DirDown
+vectorDirection (-1, 0) = DirLeft
+vectorDirection (1, 0) = DirRight
+vectorDirection _ = undefined
+
+opposite :: Direction -> Direction
+opposite DirUp = DirDown
+opposite DirDown = DirUp
+opposite DirLeft = DirRight
+opposite DirRight = DirLeft
 data World = World {
   stepTimeCur :: Float,
   stepTime :: Float,
@@ -60,7 +74,7 @@ snakeSegments segs = Pictures (
 initWorld :: World
 initWorld = World {
   stepTimeCur = 0,
-  stepTime = 0.8,
+  stepTime = 0.6,
   snake = [(x,0) | x <- [0,-1,-2,-3]],
   direction = DirRight
 }
@@ -79,21 +93,38 @@ render world = Pictures [
 
 
 eventHandle :: Event -> World -> World
-eventHandle _event world = world {snake = snake world}
+eventHandle (EventKey key Up _ _) world = 
+  case keyToDirection key of
+    Just dir ->
+      if headDirection (snake world) /= opposite dir
+      then world {direction=dir} else world
+      where
+        headDirection (p0:p1:_) = vectorDirection (p0 |- p1)
+        headDirection _ = undefined
+    Nothing -> world
+eventHandle _ world = world
 
+keyToDirection :: Key -> Maybe Direction
+keyToDirection (SpecialKey KeyUp) = Just DirUp
+keyToDirection (SpecialKey KeyDown) = Just DirDown
+keyToDirection (SpecialKey KeyLeft) = Just DirLeft
+keyToDirection (SpecialKey KeyRight) = Just DirRight
+keyToDirection _ = Nothing
+
+
+-- TODO: handle collision
+-- TODO: add fruit to eat
 
 stepHandle :: Float -> World -> World
 stepHandle dt world@World{
-  stepTimeCur = st', stepTime = st, snake = snak, direction=dir}
+  stepTimeCur=st', stepTime=st, snake=s, direction=dir}
   | (st'+dt) < st = world {stepTimeCur = st'+dt}
   | otherwise = world {
-    stepTimeCur = st'+dt-st, snake = stepSnake dir snak}
-
+    stepTimeCur = st'+dt-st, snake = stepSnake dir s}
 
 stepSnake :: Direction -> [IntVec] -> [IntVec]
-stepSnake dir snak =
-  ((head snak |+ directionVector dir |- gridOffset) |% gridSize) |+ gridOffset
-  : init snak
+stepSnake dir s =
+  ((head s |+ directionVector dir |- gridOffset) |% gridSize) |+ gridOffset : init s
 
 
 main :: IO ()
