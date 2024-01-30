@@ -29,13 +29,6 @@ directionVector DirDown = (0, -1)
 directionVector DirLeft = (-1, 0)
 directionVector DirRight = (1, 0)
 
-vectorDirection :: IntVec -> Direction
-vectorDirection (0, 1) = DirUp
-vectorDirection (0, -1) = DirDown
-vectorDirection (-1, 0) = DirLeft
-vectorDirection (1, 0) = DirRight
-vectorDirection _ = undefined
-
 opposite :: Direction -> Direction
 opposite DirUp = DirDown
 opposite DirDown = DirUp
@@ -45,7 +38,8 @@ data World = World {
   stepTimeCur :: Float,
   stepTime :: Float,
   snake :: [IntVec],
-  direction :: Direction
+  direction :: Direction,
+  prevDirection :: Direction
 } deriving (Eq, Show)
 
 
@@ -76,7 +70,8 @@ initWorld = World {
   stepTimeCur = 0,
   stepTime = 0.6,
   snake = [(x,0) | x <- [0,-1,-2,-3]],
-  direction = DirRight
+  direction = DirRight,
+  prevDirection = DirRight
 }
 
 render :: World -> Picture
@@ -96,11 +91,8 @@ eventHandle :: Event -> World -> World
 eventHandle (EventKey key Up _ _) world = 
   case keyToDirection key of
     Just dir ->
-      if headDirection (snake world) /= opposite dir
+      if prevDirection world /= opposite dir
       then world {direction=dir} else world
-      where
-        headDirection (p0:p1:_) = vectorDirection (p0 |- p1)
-        headDirection _ = undefined
     Nothing -> world
 eventHandle _ world = world
 
@@ -120,7 +112,9 @@ stepHandle dt world@World{
   stepTimeCur=st', stepTime=st, snake=s, direction=dir}
   | (st'+dt) < st = world {stepTimeCur = st'+dt}
   | otherwise = world {
-    stepTimeCur = st'+dt-st, snake = stepSnake dir s}
+    stepTimeCur = st'+dt-st, 
+    snake = stepSnake dir s,
+    prevDirection = dir}
 
 stepSnake :: Direction -> [IntVec] -> [IntVec]
 stepSnake dir s =
