@@ -1,6 +1,7 @@
 module Main(main) where
 
 import Text.Printf (printf)
+import System.Random
 
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Interact ( 
@@ -39,7 +40,9 @@ data World = World {
   stepTime :: Float,
   snake :: [IntVec],
   direction :: Direction,
-  prevDirection :: Direction
+  prevDirection :: Direction,
+  applePos :: IntVec,
+  randomGen :: StdGen
 } deriving (Eq, Show)
 
 
@@ -65,21 +68,37 @@ snakeSegments segs = Pictures (
     segsPoints = map intVecToPoint segs
 
 
-initWorld :: World
-initWorld = World {
+genInitWorld :: StdGen -> World
+genInitWorld gen = World {
   stepTimeCur = 0,
   stepTime = 0.6,
-  snake = [(x,0) | x <- [0,-1,-2,-3]],
+  snake = s,
   direction = DirRight,
-  prevDirection = DirRight
-}
+  prevDirection = DirRight,
+  applePos = apple,
+  randomGen = gen'
+} where
+  s = [(x,0) | x <- [0,-1,-2,-3]]
+  (apple, gen') = genApple s gen
+
+-- add snake bodies as blacklist
+
+genApple :: [IntVec] -> StdGen -> (IntVec, StdGen)
+genApple s gen = (available !! index, gen') where 
+  (xMn, yMn) = gridOffset
+  (xMx, yMx) = gridOffset |+ gridSize |- (1, 1)
+  available = [(x, y) |
+    x <- [xMn..xMx], y <- [yMn..yMx], (x, y) `notElem` s]
+  (index, gen') = uniformR (0, length available - 1) gen
+
 
 render :: World -> Picture
 render world = Pictures [
   color white timeText,
   scale tileSize tileSize $ Pictures [
     color green $ snakeSegments $ snake world,
-    color white boarder
+    color white boarder,
+    color red $ uncurry translate (intVecToPoint $ applePos world) $ circleSolid 0.4
     ]
   ] where
     timeText = translate (-250) 250 $ scale 0.2 0.2 $ translate 0 (-150) $ Text (printf "%.3f" $ stepTimeCur world)
@@ -105,20 +124,24 @@ keyToDirection _ = Nothing
 
 
 -- TODO: handle collision
--- TODO: add fruit to eat
 
 stepHandle :: Float -> World -> World
 stepHandle dt world@World{
-  stepTimeCur=st', stepTime=st, snake=s, direction=dir}
-  | (st'+dt) < st = world {stepTimeCur = st'+dt}
+  stepTimeCur=stc, stepTime=st, snake=s, direction=dir,
+  applePos = apple, randomGen = gen}
+  | (stc+dt) < st = world {stepTimeCur = stc+dt}
   | otherwise = world {
-    stepTimeCur = st'+dt-st, 
-    snake = stepSnake dir s,
-    prevDirection = dir}
+    stepTimeCur = stc+dt-st, stepTime = if grow then st * 0.95 else st,
+    snake = s' , prevDirection = dir,
+    applePos = apple', randomGen = gen'} where
+      snakeHead = stepSnakeHead dir s
+      grow = snakeHead == apple
+      s' = snakeHead : (if grow then s else init s)
+      (apple', gen') = if grow then genApple s' gen else (apple, gen)
 
-stepSnake :: Direction -> [IntVec] -> [IntVec]
-stepSnake dir s =
-  ((head s |+ directionVector dir |- gridOffset) |% gridSize) |+ gridOffset : init s
+stepSnakeHead :: Direction -> [IntVec] -> IntVec
+stepSnakeHead dir s =
+  ((head s |+ directionVector dir |- gridOffset) |% gridSize) |+ gridOffset
 
 
 main :: IO ()
@@ -126,6 +149,9 @@ main = do
   (screenW, screenH) <- getScreenSize
   let 
     window = InWindow "Snake" (512, 512) ((screenW - 512) `div` 2, (screenH - 512) `div` 2)
-    fps = 30
+    fps = 60
     background = black
+  genRandom <- newStdGen
+  let initWorld = genInitWorld genRandom
   play window background fps initWorld render eventHandle stepHandle
+

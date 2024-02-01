@@ -47,7 +47,7 @@ getBinDir, getLibDir, getDynLibDir, getDataDir, getLibexecDir, getSysconfDir :: 
 
 bindir, libdir, dynlibdir, datadir, libexecdir, sysconfdir :: FilePath
 bindir     = "D:\\Haskell Projects\\gloss\\gloss-snake\\.stack-work\\install\\dc27e907\\bin"
-libdir     = "D:\\Haskell Projects\\gloss\\gloss-snake\\.stack-work\\install\\dc27e907\\lib\\x86_64-windows-ghc-9.6.4\\gloss-snake-0.1.0.0-L9UZ2dap8oJLD8Jh6GQeJ6-gloss-snake"
+libdir     = "D:\\Haskell Projects\\gloss\\gloss-snake\\.stack-work\\install\\dc27e907\\lib\\x86_64-windows-ghc-9.6.4\\gloss-snake-0.1.0.0-5DP4ZWMQBgx5YCHHufpPXK-gloss-snake"
 dynlibdir  = "D:\\Haskell Projects\\gloss\\gloss-snake\\.stack-work\\install\\dc27e907\\lib\\x86_64-windows-ghc-9.6.4"
 datadir    = "D:\\Haskell Projects\\gloss\\gloss-snake\\.stack-work\\install\\dc27e907\\share\\x86_64-windows-ghc-9.6.4\\gloss-snake-0.1.0.0"
 libexecdir = "D:\\Haskell Projects\\gloss\\gloss-snake\\.stack-work\\install\\dc27e907\\libexec\\x86_64-windows-ghc-9.6.4\\gloss-snake-0.1.0.0"
