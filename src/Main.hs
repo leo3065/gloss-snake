@@ -132,7 +132,7 @@ render world
 
 pressAnyKeyText :: Picture
 pressAnyKeyText = 
-  color white $ translate (-140) (-230) $ scale 0.3 0.3 $ Text "Press any key"
+  color white $ translate (-190) (-235) $ scale 0.3 0.3 $ Text "Press Enter to start"
 
 waitScreen :: Picture
 waitScreen = Pictures [
@@ -175,7 +175,7 @@ eventHandle (EventKey key Down _ _) world@World{gameState=Running} =
         then world {nextDirection = dir}
         else world
     Nothing -> world
-eventHandle (EventKey _ Down _ _) World{randomGen=gen} =
+eventHandle (EventKey (SpecialKey KeyEnter) Down _ _) World{randomGen=gen} =
   (genInitWorld gen) {gameState=Running}
 eventHandle _ world = world
 
