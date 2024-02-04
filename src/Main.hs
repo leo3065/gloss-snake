@@ -165,9 +165,6 @@ snakeSegments segs =
 
 -- event handeling
 eventHandle :: Event -> World -> World
-eventHandle (EventKey _ Down _ _) world@World{gameState=Ready} =
-  world{gameState=Running}
-
 eventHandle (EventKey key Down _ _) world@World{gameState=Running} =
   case keyToDirection key of
     Just dir ->
@@ -175,6 +172,8 @@ eventHandle (EventKey key Down _ _) world@World{gameState=Running} =
         then world {nextDirection = dir}
         else world
     Nothing -> world
+eventHandle (EventKey _ Down _ _) World{randomGen=gen} =
+  (genInitWorld gen) {gameState=Running}
 eventHandle _ world = world
 
 keyToDirection :: Key -> Maybe Direction
@@ -199,17 +198,20 @@ stepHandle dt world@World{
   | (stc + dt) < st = world {stepTimeCur = stc + dt}
   | otherwise =
       world
-        { stepTimeCur = stc + dt - st,
-          stepTime = if grow then st * 0.95 else st,
+        { 
+          gameState = if isCollided then GameOver else Running,
+          stepTimeCur = stc + dt - st,
+          stepTime = if isGrow then st * 0.95 else st,
           snake = s',
           applePos = apple',
           randomGen = gen'
         }
   where
     snakeHead = stepSnakeHead dir' s
-    grow = snakeHead == apple
-    s' = (if grow then growSnake else stepSnake) dir' s
-    (apple', gen') = if grow then genApple (cells s') gen else (apple, gen)
+    isGrow = snakeHead == apple
+    s' = (if isGrow then growSnake else stepSnake) dir' s
+    isCollided = isCollidedSnake s'
+    (apple', gen') = if isGrow then genApple (cells s') gen else (apple, gen)
 stepHandle _ world = world
 
 stepSnakeHead :: Direction -> Snake -> IntVec
@@ -223,6 +225,10 @@ stepSnake dir' s@Snake {cells = cs} =
 growSnake :: Direction -> Snake -> Snake
 growSnake dir' s@Snake {cells = cs} =
   Snake {cells = stepSnakeHead dir' s : cs, direction = dir'}
+
+isCollidedSnake :: Snake -> Bool
+isCollidedSnake Snake{cells = h:cs} = h `elem` cs
+isCollidedSnake Snake{cells = []} = False
 
 -- main program
 main :: IO ()
