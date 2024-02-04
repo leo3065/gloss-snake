@@ -12,14 +12,27 @@ import Graphics.Gloss.Interface.Environment ( getScreenSize )
 
 type IntVec = (Int, Int)
 
-(|+) :: (Integral a, Integral b) => (a, b) -> (a, b) -> (a, b)
-(ax, ay) |+ (bx, by) = (ax+bx, ay+by)
+opIntVec :: (Int -> Int -> Int) -> IntVec -> IntVec -> IntVec
+opIntVec f (ax, ay) (bx, by) = (ax `f` bx, ay `f` by)
 
-(|-) :: (Integral a, Integral b) => (a, b) -> (a, b) -> (a, b)
-(ax, ay) |- (bx, by) = (ax-bx, ay-by)
+intVecToPoint :: IntVec -> Point
+intVecToPoint (x, y) = (fromIntegral x, fromIntegral y) :: Point 
 
-(|%) :: (Integral a, Integral b) => (a, b) -> (a, b) -> (a, b)
-(ax, ay) |% (bx, by) = (ax `mod` bx, ay `mod` by)
+infixl 6 |+
+(|+) :: IntVec -> IntVec -> IntVec
+(|+) = opIntVec (+)
+
+infixl 6 |-
+(|-) :: IntVec -> IntVec -> IntVec
+(|-) = opIntVec (-)
+
+infixl 7 |*
+(|*) :: IntVec -> IntVec -> IntVec
+(|*) = opIntVec (*)
+
+infixl 7 |%
+(|%) :: IntVec -> IntVec -> IntVec
+(|%) = opIntVec mod
 
 
 data Direction = DirUp | DirDown | DirLeft | DirRight deriving (Eq, Show)
@@ -35,6 +48,7 @@ opposite DirUp = DirDown
 opposite DirDown = DirUp
 opposite DirLeft = DirRight
 opposite DirRight = DirLeft
+
 data World = World {
   stepTimeCur :: Float,
   stepTime :: Float,
@@ -56,9 +70,6 @@ gridOffset = ((gx-1) `div` (-2), (gy-1) `div` (-2))
 tileSize :: Float
 tileSize = 24
 
-
-intVecToPoint :: IntVec -> Point
-intVecToPoint (x, y) = (fromIntegral x, fromIntegral y) :: Point 
 
 snakeSegments :: [(Int, Int)] -> Picture
 snakeSegments segs = Pictures (
