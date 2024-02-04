@@ -74,6 +74,7 @@ data World = World
     nextDirection :: Direction,
     snake :: Snake,
     applePos :: IntVec,
+    score :: Int,
     randomGen :: StdGen
   }
   deriving (Eq, Show)
@@ -94,7 +95,7 @@ genInitWorld gen =
   World{ 
     gameState = Ready,
     stepTimeCur = 0,
-    stepTime = 0.6,
+    stepTime = 0.5,
     nextDirection = DirRight,
     snake =
       Snake
@@ -102,6 +103,7 @@ genInitWorld gen =
           direction = DirRight
         },
     applePos = apple,
+    score = 0,
     randomGen = gen'
   }
   where
@@ -151,7 +153,8 @@ renderGameOver :: World -> Picture
 renderGameOver world = Pictures [
   renderWorld world, pressAnyKeyText, gameOverText]
   where
-    gameOverText = color white $ translate (-175) 195 $ scale 0.5 0.5 $ Text "Game over"
+    gameOverText = color white $ translate (-160) 195 $ scale 0.5 0.5 $ Text scoreText
+    scoreText = "Score: " ++ show (score world)
 
 snakeSegments :: [IntVec] -> Picture
 snakeSegments segs =
@@ -193,6 +196,7 @@ stepHandle dt world@World{
     snake = s,
     nextDirection = dir',
     applePos = apple,
+    score = sc,
     randomGen = gen
   }
   | (stc + dt) < st = world {stepTimeCur = stc + dt}
@@ -204,6 +208,7 @@ stepHandle dt world@World{
           stepTime = if isGrow then st * 0.95 else st,
           snake = s',
           applePos = apple',
+          score = sc + if isGrow then 1 else 0,
           randomGen = gen'
         }
   where
