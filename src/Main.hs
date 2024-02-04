@@ -9,7 +9,6 @@ import Graphics.Gloss.Interface.IO.Interact
     SpecialKey (..),
   )
 import System.Random
-import Text.Printf (printf)
 
 -- import qualified Graphics.Gloss.Data.Point.Arithmetic as V
 -- import Graphics.Gloss.Data.Vector
@@ -31,9 +30,9 @@ infixl 6 |-
 (|-) :: IntVec -> IntVec -> IntVec
 (|-) = opIntVec (-)
 
-infixl 7 |*
-(|*) :: IntVec -> IntVec -> IntVec
-(|*) = opIntVec (*)
+-- infixl 7 |*
+-- (|*) :: IntVec -> IntVec -> IntVec
+-- (|*) = opIntVec (*)
 
 infixl 7 |/
 (|/) :: IntVec -> IntVec -> IntVec
@@ -64,8 +63,13 @@ data Snake = Snake
   }
   deriving (Eq, Show)
 
+data GameState = 
+  Ready | Running | GameOver deriving (Eq, Show)
+
 data World = World
-  { stepTimeCur :: Float,
+  { 
+    gameState :: GameState,
+    stepTimeCur :: Float,
     stepTime :: Float,
     nextDirection :: Direction,
     snake :: Snake,
@@ -87,18 +91,19 @@ tileSize = 24
 -- world initialization
 genInitWorld :: StdGen -> World
 genInitWorld gen =
-  World
-    { stepTimeCur = 0,
-      stepTime = 0.6,
-      nextDirection = DirRight,
-      snake =
-        Snake
-          { cells = s,
-            direction = DirRight
-          },
-      applePos = apple,
-      randomGen = gen'
-    }
+  World{ 
+    gameState = Ready,
+    stepTimeCur = 0,
+    stepTime = 0.6,
+    nextDirection = DirRight,
+    snake =
+      Snake
+        { cells = s,
+          direction = DirRight
+        },
+    applePos = apple,
+    randomGen = gen'
+  }
   where
     s = [(x, 0) | x <- [0, -1, -2, -3]]
     (apple, gen') = genApple s gen
@@ -118,23 +123,37 @@ genApple s gen = (available !! index, gen')
 
 -- world rendering
 render :: World -> Picture
-render world =
-  Pictures
-    [ color white timeText,
-      scale tileSize tileSize $
-        Pictures
-          [ color green $ snakeSegments $ cells $ snake world,
-            color white boarder,
-            color red $ uncurry translate (intVecToPoint $ applePos world) $ circleSolid 0.4
-          ]
-    ]
+render world
+  | gameState world == Ready = waitScreen
+  | gameState world == GameOver = renderGameOver world
+  | otherwise = renderWorld world
+
+pressAnyKeyText :: Picture
+pressAnyKeyText = 
+  color white $ translate (-140) (-230) $ scale 0.3 0.3 $ Text "Press any key"
+
+waitScreen :: Picture
+waitScreen = Pictures [
+  color white $ translate (-150) 30 $ scale 0.8 0.8 $ Text "Snake", pressAnyKeyText]
+
+renderWorld :: World -> Picture
+renderWorld world =
+  scale tileSize tileSize $
+    Pictures
+      [ color green $ snakeSegments $ cells $ snake world,
+        color white boarder,
+        color red $ uncurry translate (intVecToPoint $ applePos world) $ circleSolid 0.4
+      ]
   where
-    timeText =
-      translate (-250) 250 $ scale 0.2 0.2 $ translate 0 (-150) $ Text (printf "%.3f" $ stepTimeCur world)
     boarder = uncurry rectangleWire $ intVecToPoint gridSize
 
+renderGameOver :: World -> Picture
+renderGameOver world = Pictures [
+  renderWorld world, pressAnyKeyText, gameOverText]
+  where
+    gameOverText = color white $ translate (-175) 195 $ scale 0.5 0.5 $ Text "Game over"
 
-snakeSegments :: [(Int, Int)] -> Picture
+snakeSegments :: [IntVec] -> Picture
 snakeSegments segs =
   Pictures
     ( uncurry translate (head segsPoints) (circle 0.3)
@@ -146,7 +165,10 @@ snakeSegments segs =
 
 -- event handeling
 eventHandle :: Event -> World -> World
-eventHandle (EventKey key Down _ _) world =
+eventHandle (EventKey _ Down _ _) world@World{gameState=Ready} =
+  world{gameState=Running}
+
+eventHandle (EventKey key Down _ _) world@World{gameState=Running} =
   case keyToDirection key of
     Just dir ->
       if direction (snake world) /= opposite dir
@@ -165,30 +187,30 @@ keyToDirection _ = Nothing
 -- step handling
 -- TODO: handle collision
 stepHandle :: Float -> World -> World
-stepHandle
-  dt
-  world@World
-    { stepTimeCur = stc,
-      stepTime = st,
-      snake = s,
-      nextDirection = dir',
-      applePos = apple,
-      randomGen = gen
-    }
-    | (stc + dt) < st = world {stepTimeCur = stc + dt}
-    | otherwise =
-        world
-          { stepTimeCur = stc + dt - st,
-            stepTime = if grow then st * 0.95 else st,
-            snake = s',
-            applePos = apple',
-            randomGen = gen'
-          }
-    where
-      snakeHead = stepSnakeHead dir' s
-      grow = snakeHead == apple
-      s' = (if grow then growSnake else stepSnake) dir' s
-      (apple', gen') = if grow then genApple (cells s') gen else (apple, gen)
+stepHandle dt world@World{
+    gameState = Running,
+    stepTimeCur = stc,
+    stepTime = st,
+    snake = s,
+    nextDirection = dir',
+    applePos = apple,
+    randomGen = gen
+  }
+  | (stc + dt) < st = world {stepTimeCur = stc + dt}
+  | otherwise =
+      world
+        { stepTimeCur = stc + dt - st,
+          stepTime = if grow then st * 0.95 else st,
+          snake = s',
+          applePos = apple',
+          randomGen = gen'
+        }
+  where
+    snakeHead = stepSnakeHead dir' s
+    grow = snakeHead == apple
+    s' = (if grow then growSnake else stepSnake) dir' s
+    (apple', gen') = if grow then genApple (cells s') gen else (apple, gen)
+stepHandle _ world = world
 
 stepSnakeHead :: Direction -> Snake -> IntVec
 stepSnakeHead dir' Snake {cells = cs} =
